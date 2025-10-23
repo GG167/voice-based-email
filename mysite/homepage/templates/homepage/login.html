@@ -1,0 +1,46 @@
+{% extends 'base_layout.html' %}
+
+{% block content %}
+<body>
+    <nav class="navbar navbar-dark navbar-expand-lg fixed-top bg-dark navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" style="font-size:150%;">VOICE BASED EMAIL FOR THE BLIND</a>
+        </div>
+    </nav>
+
+    <header class="masthead text-center text-white">
+        <div class="masthead-content">
+            <div class="container">
+                <h1 style="margin-top:-60px; font-size:60px; color: rgb(178, 49, 49);">
+                    LOGIN USING VOICE
+                </h1>
+
+                <!-- Voice login trigger button -->
+                <form id="voiceLoginForm" action="{% url 'homepage:login' %}" method="POST">
+                    {% csrf_token %}
+                    <div class="container login" style="max-width:400px; margin:auto; text-align:center;">
+                        <p style="color:rgb(230, 225, 225); font-size:18px;">
+                            Click the button below and follow the voice instructions to log in.
+                        </p>
+                        <button type="submit" class="btn btn-danger btn-lg w-100">
+                            Start Voice Login
+                        </button>
+                    </div>
+                </form>
+
+                {% if error_message %}
+                    <div class="alert alert-danger mt-3" role="alert">
+                        {{ error_message }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <footer class="py-5 bg-black">
+        <div class="container">
+            <p class="text-center text-white m-0 small">© Voice Based Email</p>
+        </div>
+    </footer>
+</body>
+{% endblock %}
