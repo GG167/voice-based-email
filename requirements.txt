@@ -1,6 +1,6 @@
 # Core dependencies
 Flask==2.3.3
-Flask-Cors==3.1.2
+Flask-Cors==3.0.10
 Flask-SocketIO==6.6.2
 eventlet==0.33.3
 requests==2.31.0
@@ -18,7 +18,7 @@ email-validator==2.1.1
 
 # Security and hashing
 bcrypt==4.1.2
-cryptography==41.0.4
+cryptography==40.0.2
 
 # Database (if you plan to use SQLite or MySQL)
 SQLAlchemy==2.0.23
