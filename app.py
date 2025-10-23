@@ -1,121 +1,52 @@
-import streamlit as st
+from flask import Flask, render_template, request, redirect, session, url_for, send_file
 from gtts import gTTS
 import speech_recognition as sr
 import smtplib
 from email.message import EmailMessage
 import os
+from dotenv import load_dotenv
 import tempfile
 
-# ------------------ PAGE CONFIG ------------------
-st.set_page_config(page_title="Voice Based Email", page_icon="✉️", layout="wide")
-st.title("🎙️ Voice Based Email for the Blind")
+load_dotenv()  # load EMAIL_USER, EMAIL_PASSWORD
 
-# ------------------ UTILITY FUNCTIONS ------------------
-def text_to_speech(text):
-    """Convert text to speech and play it via Streamlit."""
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
-            tts = gTTS(text=text, lang="en")
-            tts.save(tmp_file.name)
-            audio_bytes = open(tmp_file.name, "rb").read()
-            st.audio(audio_bytes, format="audio/mp3")
-        os.remove(tmp_file.name)
-    except Exception as e:
-        st.error(f"Speech synthesis failed: {e}")
+app = Flask(__name__)
+app.secret_key = 'your_secret_key'
 
-def speech_to_text(audio_file):
-    """Convert uploaded audio file (wav/mp3) to text."""
-    recognizer = sr.Recognizer()
-    try:
-        with sr.AudioFile(audio_file) as source:
-            audio_data = recognizer.record(source)
-        return recognizer.recognize_google(audio_data)
-    except sr.UnknownValueError:
-        return ""
-    except sr.RequestError:
-        st.error("Could not connect to the speech recognition service.")
-        return ""
-    except Exception as e:
-        st.error(f"Error processing audio: {e}")
-        return ""
+@app.route("/", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        if email == os.getenv("EMAIL_USER") and password == os.getenv("EMAIL_PASSWORD"):
+            session['logged_in'] = True
+            return redirect(url_for("compose"))
+    return render_template("login.html")
 
-def send_email(sender_email, sender_password, recipient, subject, body):
-    """Send an email via Gmail SMTP."""
-    msg = EmailMessage()
-    msg["From"] = sender_email
-    msg["To"] = recipient
-    msg["Subject"] = subject
-    msg.set_content(body)
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(sender_email, sender_password)
-            smtp.send_message(msg)
-        return True
-    except smtplib.SMTPAuthenticationError:
-        st.error("Authentication failed. Check your email and app password.")
-        return False
-    except Exception as e:
-        st.error(f"Failed to send email: {e}")
-        return False
-
-# ------------------ LOGIN ------------------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-if not st.session_state.logged_in:
-    st.subheader("🔐 Login to Your Gmail Account")
-    email = st.text_input("Email Address")
-    password = st.text_input("App Password (not your main Gmail password)", type="password")
-
-    if st.button("Login"):
-        if email and password:
-            st.session_state.logged_in = True
-            st.session_state.email = email
-            st.session_state.password = password
-            st.success("Login successful!")
-            text_to_speech("Login successful. You can now compose your email.")
-        else:
-            st.error("Please enter both email and password.")
-
-# ------------------ MAIN APP ------------------
-if st.session_state.logged_in:
-    st.subheader("✉️ Compose and Send Email")
+@app.route("/compose", methods=["GET", "POST"])
+def compose():
+    if 'logged_in' not in session:
+        return redirect(url_for("login"))
     
-    recipient = st.text_input("Recipient's Email")
-    subject = st.text_input("Subject")
-    body = st.text_area("Body")
+    if request.method == "POST":
+        recipient = request.form.get("recipient")
+        subject = request.form.get("subject")
+        body = request.form.get("body")
+        
+        msg = EmailMessage()
+        msg['From'] = os.getenv("EMAIL_USER")
+        msg['To'] = recipient
+        msg['Subject'] = subject
+        msg.set_content(body)
+        
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+                smtp.login(os.getenv("EMAIL_USER"), os.getenv("EMAIL_PASSWORD"))
+                smtp.send_message(msg)
+            return "Email sent successfully!"
+        except Exception as e:
+            return f"Error sending email: {e}"
 
-    # Voice input
-    st.markdown("🎤 **Upload a voice file (WAV or MP3) to input email body automatically:**")
-    audio_file = st.file_uploader("Upload audio", type=["wav", "mp3"])
-    if audio_file is not None:
-        st.info("Processing audio file...")
-        recognized_text = speech_to_text(audio_file)
-        if recognized_text:
-            st.success(f"Recognized text: {recognized_text}")
-            body = recognized_text
-        else:
-            st.warning("Could not recognize speech from the uploaded file.")
+    return render_template("compose.html")
 
-    if st.button("Send Email"):
-        if recipient and subject and body:
-            if send_email(st.session_state.email, st.session_state.password, recipient, subject, body):
-                st.success("✅ Email sent successfully!")
-                text_to_speech("Your email has been sent successfully.")
-        else:
-            st.error("Please fill all fields before sending.")
-
-    st.markdown("---")
-    st.markdown("### Other Actions")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔍 Search Latest Emails (Demo)"):
-            st.info("Feature under development.")
-            text_to_speech("Searching your latest five emails. Please wait.")
-    with col2:
-        if st.button("🚪 Logout"):
-            st.session_state.logged_in = False
-            st.experimental_rerun()
-
-st.markdown("---")
-st.caption("Developed by Goutham | Voice Based Email System 🧠🎧")
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
