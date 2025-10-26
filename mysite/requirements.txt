@@ -6,3 +6,4 @@ dj-database-url
 whitenoise
 sounddevice
 scipy
+gTTS==2.5
