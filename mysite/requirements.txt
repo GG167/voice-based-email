@@ -1,4 +1,8 @@
-Django
+Django==5.2.7
 SpeechRecognition
 playsound==1.2.2
-
+gunicorn
+dj-database-url
+whitenoise
+sounddevice
+scipy
